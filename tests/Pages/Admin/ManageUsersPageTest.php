@@ -9,16 +9,19 @@ use PHPUnit\Framework\Attributes\DataProvider;
 class ManageUsersPageTest extends TestBase
 {
     private array $originalPost = [];
+    private array $originalGet = [];
 
     public function setUp(): void
     {
         parent::setUp();
         $this->originalPost = $_POST;
+        $this->originalGet = $_GET;
     }
 
     public function tearDown(): void
     {
         $_POST = $this->originalPost;
+        $_GET = $this->originalGet;
         parent::tearDown();
     }
 
@@ -48,6 +51,43 @@ class ManageUsersPageTest extends TestBase
         $page = $this->createPageWithoutConstructor();
 
         $this->assertSame('', $page->GetPassword());
+    }
+
+    public function testUserIdFallsBackFromQuerystringToForm(): void
+    {
+        $_POST[FormKeys::PK] = '42';
+        $this->assertSame(42, $this->createPageWithoutConstructor()->GetUserId());
+
+        $_GET[QueryStringKeys::USER_ID] = '7';
+        $this->assertSame(7, $this->createPageWithoutConstructor()->GetUserId());
+    }
+
+    public function testUserIdIsNullWhenNotSubmitted(): void
+    {
+        unset($_GET[QueryStringKeys::USER_ID], $_POST[FormKeys::PK]);
+
+        $this->assertNull($this->createPageWithoutConstructor()->GetUserId());
+    }
+
+    public function testUserGroupIsParsedAsInteger(): void
+    {
+        $_POST[FormKeys::GROUP_ID] = '3';
+
+        $this->assertSame(3, $this->createPageWithoutConstructor()->GetUserGroup());
+    }
+
+    public function testDeletedUserIdsParsesSubmittedList(): void
+    {
+        $_POST[FormKeys::USER_ID] = ['5', 'abc', '6'];
+
+        $this->assertSame([5, 6], $this->createPageWithoutConstructor()->GetDeletedUserIds());
+    }
+
+    public function testDeletedUserIdsIsEmptyWhenNothingIsSubmitted(): void
+    {
+        unset($_POST[FormKeys::USER_ID]);
+
+        $this->assertSame([], $this->createPageWithoutConstructor()->GetDeletedUserIds());
     }
 
     /**
